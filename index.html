@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<meta name="theme-color" content="#05070d" />
+<title>🧾 نظام تسجيل الفواتير</title>
+<style>
+  :root{
+    --gold:#f5d489;
+    --gold-2:#d4af37;
+    --glass-bg: linear-gradient(160deg, rgba(255,255,255,.11), rgba(255,255,255,.03));
+    --glass-brd: rgba(255,255,255,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Segoe UI","Noto Kufi Arabic",Tahoma,system-ui,sans-serif;
+    background:#05070d;color:#e9f1ff;min-height:100vh;direction:rtl;
+    overflow-x:hidden;padding-bottom:50px;
+  }
+
+  /* ===== الخلفية المتحركة ===== */
+  .blobs{
+    position:fixed;inset:0;z-index:-1;overflow:hidden;
+    background:
+      radial-gradient(1100px 700px at 85% -10%, rgba(38,86,160,.55), transparent 60%),
+      radial-gradient(900px 700px at 5% 105%, rgba(120,40,160,.45), transparent 60%),
+      radial-gradient(700px 500px at 50% 50%, rgba(20,60,90,.35), transparent 70%),
+      #05070d;
+  }
+  .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5;mix-blend-mode:screen}
+  .b1{width:420px;height:420px;background:#2b6cff;top:-120px;left:-100px;animation:drift1 20s ease-in-out infinite}
+  .b2{width:380px;height:380px;background:#a13bff;bottom:-140px;right:-80px;animation:drift2 24s ease-in-out infinite}
+  .b3{width:320px;height:320px;background:#00c2a8;top:45%;left:55%;animation:drift3 28s ease-in-out infinite}
+  @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,60px)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-70px,-50px)}}
+  @keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-60px,70px) scale(1.15)}}
+
+  /* ===== الزجاج الشفاف ===== */
+  .glass{
+    background:var(--glass-bg);
+    backdrop-filter:blur(18px) saturate(160%);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    border:1px solid var(--glass-brd);
+    border-radius:26px;
+    box-shadow:0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18);
+  }
+
+  /* ===== الهيدر ===== */
+  .app-header{
+    max-width:900px;width:calc(100% - 28px);margin:18px auto 0;padding:16px 20px;
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand-icon{
+    font-size:30px;width:60px;height:60px;display:grid;place-items:center;border-radius:20px;
+    background:linear-gradient(140deg, rgba(245,212,137,.25), rgba(245,212,137,.05));
+    border:1px solid rgba(245,212,137,.35);
+    box-shadow:0 0 30px rgba(245,212,137,.25);
+    animation:float 3.5s ease-in-out infinite;
+  }
+  .brand h1{
+    margin:0;font-size:1.15rem;letter-spacing:.2px;
+    background:linear-gradient(100deg,#fff,#f5d489 45%,#fff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand p{margin:4px 0 0;font-size:.78rem;color:#9fb2cc}
+
+  /* ===== الحاوية ===== */
+  main{max-width:900px;margin:0 auto;padding:18px 14px;display:flex;flex-direction:column;gap:18px}
+  .sections{display:flex;flex-direction:column;gap:16px}
+
+  /* ===== بطاقة القسم ===== */
+  .section-card{padding:16px 16px 14px;animation:rise .55s ease both}
+  .section-card:nth-child(1){animation-delay:.03s}
+  .section-card:nth-child(2){animation-delay:.08s}
+  .section-card:nth-child(3){animation-delay:.13s}
+  .section-card:nth-child(4){animation-delay:.18s}
+  .section-card:nth-child(5){animation-delay:.23s}
+  .section-card:nth-child(6){animation-delay:.28s}
+  @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+  .section-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+  .emblem{
+    position:relative;flex:0 0 auto;width:74px;height:74px;border-radius:50%;
+    display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 25%, rgba(255,255,255,.25), rgba(255,255,255,.04) 65%);
+    border:1px solid rgba(255,255,255,.22);
+  }
+  .emblem::before{
+    content:'';position:absolute;inset:-8px;border-radius:50%;
+    background:conic-gradient(from 0deg, var(--c1), var(--c2), var(--c1));
+    filter:blur(11px);opacity:.75;animation:spin 7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .emblem .emoji{
+    position:relative;z-index:2;font-size:34px;display:block;
+    filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));
+  }
+
+  /* حركات الصور المتحركة */
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @keyframes bounce{0%,100%{transform:translateY(0) scale(1)}30%{transform:translateY(-10px) scale(1.07)}60%{transform:translateY(0) scale(.96)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+  @keyframes sway{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
+  @keyframes wiggle{0%,100%{transform:rotate(0) translateY(0)}25%{transform:rotate(-9deg) translateY(-3px)}75%{transform:rotate(9deg) translateY(-3px)}}
+  @keyframes tilt{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+  .float{animation:float 3s ease-in-out infinite}
+  .bounce{animation:bounce 2.4s ease-in-out infinite}
+  .pulse{animation:pulse 2s ease-in-out infinite}
+  .sway{animation:sway 2.6s ease-in-out infinite}
+  .wiggle{animation:wiggle 2.2s ease-in-out infinite}
+  .tilt{animation:tilt 3.2s ease-in-out infinite}
+
+  .section-title{flex:1;min-width:0}
+  .section-title h2{margin:0;font-size:1.03rem;font-weight:800;letter-spacing:.2px}
+  .sec-meta{
+    margin-top:5px;font-size:.8rem;color:var(--gold);font-weight:700;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .sec-meta .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:linear-gradient(140deg,var(--c1),var(--c2));
+    box-shadow:0 0 10px var(--c2);
+  }
+
+  /* ===== صفوف المواد ===== */
+  .items{display:flex;flex-direction:column;gap:8px}
+  .item-row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 88px 88px 34px;
+    gap:8px;align-items:center;
+  }
+  .item-row input{
+    width:100%;padding:10px 11px;border-radius:13px;
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.06);
+    color:#eaf2ff;font-size:.9rem;font-family:inherit;outline:none;transition:.2s;
+  }
+  .item-row input::placeholder{color:#7d90aa}
+  .item-row input:focus{
+    border-color:rgba(245,212,137,.7);
+    background:rgba(255,255,255,.11);
+    box-shadow:0 0 0 3px rgba(245,212,137,.13);
+  }
+  .i-cartons,.i-pieces{text-align:center}
+  .del{
+    width:34px;height:34px;border-radius:11px;cursor:pointer;
+    border:1px solid rgba(255,90,90,.35);
+    background:rgba(255,60,60,.12);color:#ff9b9b;font-size:.8rem;
+    transition:.2s;
+  }
+  .del:hover{background:rgba(255,60,60,.25);transform:scale(1.06)}
+
+  .add-btn{
+    margin-top:11px;width:100%;padding:12px;border-radius:15px;cursor:pointer;
+    border:1px solid rgba(245,212,137,.45);
+    background:linear-gradient(135deg, rgba(245,212,137,.18), rgba(245,212,137,.05));
+    color:#f5d489;font-family:inherit;font-size:.9rem;font-weight:800;transition:.2s;
+    letter-spacing:.3px;
+  }
+  .add-btn:hover{background:linear-gradient(135deg, rgba(245,212,137,.28), rgba(245,212,137,.1));color:#fff}
+  .add-btn:active{transform:scale(.98)}
+
+  /* ===== الملاحظات والإجمالي ===== */
+  .card-title{margin:0 0 12px;font-size:1rem;font-weight:800}
+  .notes-card{padding:18px}
+  textarea{
+    width:100%;resize:vertical;min-height:92px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:16px;padding:14px;color:#eaf2ff;
+    font-family:inherit;font-size:.93rem;line-height:1.7;outline:none;transition:.2s;
+  }
+  textarea::placeholder{color:#7d90aa}
+  textarea:focus{border-color:rgba(245,212,137,.7);box-shadow:0 0 0 3px rgba(245,212,137,.13)}
+
+  /* ===== التوقيع الفخم ===== */
+  .signature{
+    margin-top:16px;
+    text-align:center;
+    font-size:1.08rem;
+    font-weight:800;
+    letter-spacing:.6px;
+    padding:14px 8px 4px;
+    border-top:1px dashed rgba(245,212,137,.35);
+    background:linear-gradient(100deg,#f5d489,#fff,#f5d489);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    position:relative;
+  }
+  .signature::before,
+  .signature::after{
+    content:'✦';
+    -webkit-text-fill-color:#f5d489;
+    color:#f5d489;
+    margin:0 12px;
+    font-size:.9rem;
+  }
+
+  .total-card{padding:18px}
+  .total-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:11px 4px;font-size:.92rem;color:#b9cbe3;
+    border-bottom:1px solid rgba(255,255,255,.07);
+  }
+  .total-row:last-of-type{border-bottom:none}
+  .total-row strong{color:#fff;font-size:1.05rem}
+  .total-row.grand{
+    margin-top:8px;padding:14px;border-radius:16px;border-bottom:none;
+    background:linear-gradient(135deg, rgba(245,212,137,.16), rgba(245,212,137,.04));
+    border:1px solid rgba(245,212,137,.32);
+  }
+  .total-row.grand span{color:#f0dfb6;font-weight:700}
+  .total-row.grand strong{
+    font-size:1.35rem;
+    background:linear-gradient(100deg,#fff,#f5d489);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+
+  .actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .btn{
+    flex:1;min-width:150px;padding:14px 18px;border-radius:17px;cursor:pointer;
+    font-family:inherit;font-size:.95rem;font-weight:800;border:none;transition:.2s;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-primary{
+    background:linear-gradient(135deg,#fbeab6,#d4af37 48%,#a9821a);
+    color:#1a1204;
+    box-shadow:0 12px 34px rgba(212,175,55,.35);
+  }
+  .btn-primary:hover{box-shadow:0 16px 44px rgba(212,175,55,.5)}
+  .btn-ghost{
+    background:rgba(255,255,255,.06);color:#dbe8ff;
+    border:1px solid rgba(255,255,255,.18);
+  }
+  .btn-ghost:hover{background:rgba(255,255,255,.12)}
+
+  .hint{margin-top:12px;font-size:.78rem;color:#8fa4be;text-align:center;min-height:1em}
+
+  /* ===== التوست ===== */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);
+    padding:13px 22px;border-radius:16px;font-size:.88rem;font-weight:700;
+    background:rgba(20,30,48,.85);backdrop-filter:blur(14px);
+    border:1px solid rgba(245,212,137,.4);color:#ffeec2;
+    box-shadow:0 18px 50px rgba(0,0,0,.6);
+    transition:transform .45s cubic-bezier(.2,.9,.3,1.3);z-index:9999;
+    max-width:90vw;text-align:center;
+  }
+  .toast.show{transform:translate(-50%,0)}
+
+  /* ===== نافذة المعاينة ===== */
+  .modal{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;padding:16px}
+  .modal.open{display:flex}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(3,6,12,.72);backdrop-filter:blur(7px)}
+  .modal-card{
+    position:relative;z-index:2;width:100%;max-width:560px;max-height:88vh;overflow:auto;
+    padding:20px 18px 18px;animation:pop .35s cubic-bezier(.2,.9,.3,1.3);
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
+  .modal-close{
+    position:absolute;top:12px;left:12px;width:34px;height:34px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);
+    color:#fff;cursor:pointer;font-size:.85rem;
+  }
+  .modal-actions{display:flex;gap:10px;margin-top:16px}
+
+  /* ===== تصميم الفاتورة الفخم ===== */
+  .inv{
+    border-radius:20px;padding:18px 16px;
+    background:linear-gradient(165deg, rgba(255,255,255,.09), rgba(255,255,255,.02));
+    border:1px solid rgba(245,212,137,.35);
+    box-shadow:inset 0 0 40px rgba(245,212,137,.06);
+  }
+  .inv-head{text-align:center;padding-bottom:12px}
+  .inv-badge{
+    width:56px;height:56px;margin:0 auto 8px;border-radius:50%;
+    display:grid;place-items:center;font-size:26px;
+    background:linear-gradient(140deg, rgba(245,212,137,.28), rgba(245,212,137,.05));
+    border:1px solid rgba(245,212,137,.5);
+    box-shadow:0 0 26px rgba(245,212,137,.3);
+  }
+  .inv-head h2{
+    margin:0;font-size:1.12rem;letter-spacing:.4px;
+    background:linear-gradient(100deg,#fff,#f5d489 50%,#fff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .inv-line{
+    height:2px;margin:12px auto;width:75%;
+    background:linear-gradient(90deg,transparent,var(--gold-2),transparent);
+    border-radius:2px;
+  }
+  .inv-datetime{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:#c7d7ea}
+  .inv-sec{
+    margin-top:12px;padding:10px 12px;border-radius:14px;
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.1);
+    border-right:3px solid var(--gold-2);
+  }
+  .inv-sec-head{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.9rem;margin-bottom:7px}
+  .inv-emoji{font-size:1.05rem}
+  .inv-item{
+    display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;
+    font-size:.82rem;color:#d6e4f5;padding:6px 0;
+    border-bottom:1px dashed rgba(255,255,255,.08);
+    align-items:center;
+  }
+  .inv-item:last-child{border-bottom:none}
+  .inv-item .nm{font-weight:700}
+  .inv-item .qty{
+    font-size:.75rem;color:#c7d7ea;white-space:nowrap;
+  }
+  .inv-item .qty b{color:var(--gold);font-weight:800}
+  .inv-sec-total{margin-top:7px;text-align:left;font-size:.78rem;color:#f0dfb6;font-weight:700}
+  .inv-total{
+    margin-top:14px;padding:14px;border-radius:16px;text-align:center;
+    background:linear-gradient(135deg, rgba(245,212,137,.2), rgba(245,212,137,.05));
+    border:1px solid rgba(245,212,137,.45);
+  }
+  .inv-total small{display:block;font-size:.75rem;color:#e6d5a8;margin-bottom:4px}
+  .inv-total b{
+    font-size:1.15rem;color:#fff;
+  }
+  .inv-notes{
+    margin-top:12px;padding:12px;border-radius:14px;font-size:.82rem;line-height:1.8;
+    background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.18);color:#d6e4f5;
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .inv-sign{
+    margin-top:14px;
+    text-align:center;
+    font-size:1rem;
+    font-weight:800;
+    letter-spacing:.5px;
+    padding:12px 6px 2px;
+    border-top:1px dashed rgba(245,212,137,.4);
+    background:linear-gradient(100deg,#f5d489,#fff,#f5d489);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .inv-foot{margin-top:10px;text-align:center;font-size:.72rem;color:#8fa4be;letter-spacing:.5px}
+
+  /* ===== الجوال ===== */
+  @media (max-width:620px){
+    .item-row{
+      grid-template-columns:1fr 1fr 34px;
+      grid-template-areas:
+        "name name del"
+        "cartons pieces pieces";
+    }
+    .i-name{grid-area:name}
+    .i-cartons{grid-area:cartons}
+    .i-pieces{grid-area:pieces}
+    .del{grid-area:del;justify-self:end}
+    .emblem{width:64px;height:64px}
+    .emblem .emoji{font-size:29px}
+    .brand h1{font-size:1rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="blobs">
+  <span class="blob b1"></span>
+  <span class="blob b2"></span>
+  <span class="blob b3"></span>
+</div>
+
+<header class="glass app-header">
+  <div class="brand">
+    <div class="brand-icon">🧾</div>
+    <div>
+      <h1>نظام تسجيل الفواتير</h1>
+      <p>سجّل الكراتين والقطع في جميع الأقسام — الحفظ تلقائي</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="sections" class="sections"></div>
+
+  <section class="glass notes-card">
+    <h2 class="card-title">📝 الملاحظات</h2>
+    <textarea id="notes" rows="3" placeholder="اكتب ملاحظتك هنا... ستُضاف تلقائياً إلى الفاتورة"></textarea>
+    <div class="signature">نتمنى لكم طريق سلامة</div>
+  </section>
+
+  <section class="glass total-card">
+    <div class="total-row">
+      <span>📦 عدد المواد المسجّلة</span>
+      <strong id="itemsCount">0</strong>
+    </div>
+    <div class="total-row">
+      <span>📥 مجموع الكراتين</span>
+      <strong id="cartonsTotal">0</strong>
+    </div>
+    <div class="total-row grand">
+      <span>🔹 مجموع القطع</span>
+      <strong id="piecesTotal">0</strong>
+    </div>
+    <div class="actions">
+      <button id="copyBtn" class="btn btn-primary" type="button">📋 نسخ الفاتورة</button>
+      <button id="clearBtn" class="btn btn-ghost" type="button">🗑 مسح الفاتورة</button>
+    </div>
+    <div class="hint" id="lastCopyHint"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<div id="modal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card glass">
+    <button class="modal-close" data-close type="button">✕</button>
+    <div id="previewBody"></div>
+    <div class="modal-actions">
+      <button id="modalCopy" class="btn btn-primary" type="button">📋 نسخ النص</button>
+      <button class="btn btn-ghost" data-close type="button">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   الإعدادات والأقسام
+   ========================================================= */
+const STORAGE_KEY = 'iraq_invoice_app_v2';
+
+const SECTIONS = [
+  { id:'food',   name:'القسم الغذائي',   emoji:'🍎', c1:'#ff8a5b', c2:'#ffd166', anim:'float'  },
+  { id:'sweets', name:'قسم الحلويات',    emoji:'🍰', c1:'#ff5f9e', c2:'#ffc2dd', anim:'bounce' },
+  { id:'cheese', name:'قسم الأجبان',     emoji:'🧀', c1:'#ffcf4d', c2:'#fff1a8', anim:'pulse'  },
+  { id:'clean',  name:'قسم المنظفات',    emoji:'🧴', c1:'#4dd4ff', c2:'#8ef7d3', anim:'sway'   },
+  { id:'misc',   name:'قسم العشوائيات',  emoji:'📦', c1:'#a78bfa', c2:'#f0abfc', anim:'wiggle' },
+  { id:'gypsum', name:'قسم الجبس',       emoji:'🏗️', c1:'#9fb3c8', c2:'#e8eef7', anim:'tilt'  }
+];
+
+/* =========================================================
+   أدوات مساعدة
+   ========================================================= */
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
+/* وقت وتاريخ العراق */
+function iraqTime(){
+  const now = new Date();
+  const p = { timeZone: 'Asia/Baghdad' };
+  let dateStr, timeStr;
+  try{
+    dateStr = new Intl.DateTimeFormat('ar-IQ-u-nu-latn',
+      { ...p, weekday:'long', day:'numeric', month:'long', year:'numeric' }).format(now);
+    timeStr = new Intl.DateTimeFormat('ar-IQ-u-nu-latn',
+      { ...p, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true }).format(now);
+  }catch(e){
+    dateStr = now.toLocaleDateString('ar-IQ');
+    timeStr = now.toLocaleTimeString('ar-IQ');
+  }
+  return { dateStr, timeStr };
+}
+
+/* =========================================================
+   الحالة والتخزين
+   ========================================================= */
+function defaultState(){
+  const st = { sections:{}, notes:'', lastCopy:null };
+  SECTIONS.forEach(s => st.sections[s.id] = [{ name:'', cartons:0, pieces:0 }]);
+  return st;
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    const p = JSON.parse(raw);
+    const st = defaultState();
+    if(p && typeof p === 'object'){
+      if(typeof p.notes === 'string') st.notes = p.notes;
+      if(p.lastCopy && p.lastCopy.dateStr) st.lastCopy = p.lastCopy;
+      SECTIONS.forEach(s => {
+        const arr = p.sections && p.sections[s.id];
+        if(Array.isArray(arr) && arr.length){
+          st.sections[s.id] = arr.map(it => ({
+            name   : String(it && it.name != null ? it.name : ''),
+            cartons: Number(it && it.cartons) || 0,
+            pieces : Number(it && it.pieces)  || 0
+          }));
+        }
+      });
+    }
+    return st;
+  }catch(e){
+    return defaultState();
+  }
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+const state = loadState();
+
+/* =========================================================
+   عناصر الصفحة
+   ========================================================= */
+const sectionsEl  = document.getElementById('sections');
+const notesEl     = document.getElementById('notes');
+const itemsCountEl= document.getElementById('itemsCount');
+const cartonsEl   = document.getElementById('cartonsTotal');
+const piecesEl    = document.getElementById('piecesTotal');
+const hintEl      = document.getElementById('lastCopyHint');
+const toastEl     = document.getElementById('toast');
+const modalEl     = document.getElementById('modal');
+const previewEl   = document.getElementById('previewBody');
+
+/* =========================================================
+   بناء الأقسام
+   ========================================================= */
+function buildRow(secId, item, idx){
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.dataset.index = idx;
+  row.innerHTML =
+    '<input class="i-name"    type="text"   placeholder="اسم المادة" value="' + esc(item.name) + '" />' +
+    '<input class="i-cartons" type="number" inputmode="numeric" min="0" step="1" placeholder="كراتين" value="' + (item.cartons === 0 ? '' : item.cartons) + '" />' +
+    '<input class="i-pieces"  type="number" inputmode="numeric" min="0" step="1" placeholder="قطع"    value="' + (item.pieces  === 0 ? '' : item.pieces ) + '" />' +
+    '<button class="del" type="button" title="حذف">✕</button>';
+  return row;
+}
+
+function buildSection(sec){
+  const card = document.createElement('section');
+  card.className = 'glass section-card';
+  card.dataset.id = sec.id;
+  card.style.setProperty('--c1', sec.c1);
+  card.style.setProperty('--c2', sec.c2);
+  card.innerHTML =
+    '<div class="section-head">' +
+      '<div class="emblem"><span class="emoji ' + sec.anim + '">' + sec.emoji + '</span></div>' +
+      '<div class="section-title">' +
+        '<h2>' + sec.name + '</h2>' +
+        '<div class="sec-meta"><span class="dot"></span><span data-sec-meta>0 كرتون · 0 قطعة</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="items" data-items></div>' +
+    '<button class="add-btn" data-add type="button">✔ موافق — إضافة مادة أخرى</button>';
+
+  const wrap = card.querySelector('[data-items]');
+  state.sections[sec.id].forEach((it, i) => wrap.appendChild(buildRow(sec.id, it, i)));
+  return card;
+}
+
+function renderAll(){
+  sectionsEl.innerHTML = '';
+  SECTIONS.forEach(sec => sectionsEl.appendChild(buildSection(sec)));
+  SECTIONS.forEach(sec => updateSectionMeta(sec.id));
+  updateTotals();
+  notesEl.value = state.notes || '';
+  updateLastCopyHint();
+}
+
+/* =========================================================
+   الحسابات
+   ========================================================= */
+function sectionStats(secId){
+  const items = state.sections[secId] || [];
+  let cartons = 0, pieces = 0, count = 0;
+  items.forEach(it => {
+    if(String(it.name).trim() !== '') count++;
+    cartons += Number(it.cartons) || 0;
+    pieces  += Number(it.pieces)  || 0;
+  });
+  return { cartons, pieces, count };
+}
+
+function updateSectionMeta(secId){
+  const card = sectionsEl.querySelector('.section-card[data-id="' + secId + '"]');
+  if(!card) return;
+  const el = card.querySelector('[data-sec-meta]');
+  const s = sectionStats(secId);
+  if(el) el.textContent = s.cartons + ' كرتون · ' + s.pieces + ' قطعة';
+}
+
+function updateTotals(){
+  let cartons = 0, pieces = 0, count = 0;
+  SECTIONS.forEach(s => {
+    const st = sectionStats(s.id);
+    cartons += st.cartons;
+    pieces  += st.pieces;
+    count   += st.count;
+  });
+  itemsCountEl.textContent = count;
+  cartonsEl.textContent    = cartons;
+  piecesEl.textContent     = pieces;
+}
+
+function refreshSection(secId){
+  const card = sectionsEl.querySelector('.section-card[data-id="' + secId + '"]');
+  if(!card) return;
+  const wrap = card.querySelector('[data-items]');
+  wrap.innerHTML = '';
+  state.sections[secId].forEach((it, i) => wrap.appendChild(buildRow(secId, it, i)));
+  updateSectionMeta(secId);
+  updateTotals();
+}
+
+/* =========================================================
+   الأحداث
+   ========================================================= */
+sectionsEl.addEventListener('input', e => {
+  const t = e.target;
+  const row = t.closest('.item-row');
+  if(!row) return;
+  const card = t.closest('.section-card');
+  if(!card) return;
+
+  const secId = card.dataset.id;
+  const idx = Number(row.dataset.index);
+  const item = state.sections[secId][idx];
+  if(!item) return;
+
+  if(t.classList.contains('i-name')){
+    item.name = t.value;
+  } else if(t.classList.contains('i-cartons')){
+    item.cartons = t.value === '' ? 0 : Number(t.value);
+  } else if(t.classList.contains('i-pieces')){
+    item.pieces = t.value === '' ? 0 : Number(t.value);
+  } else {
+    return;
+  }
+
+  updateSectionMeta(secId);
+  updateTotals();
+  saveState();
+});
+
+sectionsEl.addEventListener('click', e => {
+  const addBtn = e.target.closest('[data-add]');
+  if(addBtn){
+    const secId = addBtn.closest('.section-card').dataset.id;
+    state.sections[secId].push({ name:'', cartons:0, pieces:0 });
+    refreshSection(secId);
+    saveState();
+    const card = sectionsEl.querySelector('.section-card[data-id="' + secId + '"]');
+    const rows = card.querySelectorAll('.item-row');
+    const last = rows[rows.length - 1];
+    if(last){
+      const input = last.querySelector('.i-name');
+      if(input){
+        input.focus();
+        last.scrollIntoView({ behavior:'smooth', block:'center' });
+      }
+    }
+    toast('✔ تمت الإضافة — يمكنك إدخال مادة جديدة');
+    return;
+  }
+
+  const del = e.target.closest('.del');
+  if(del){
+    const secId = del.closest('.section-card').dataset.id;
+    const idx = Number(del.closest('.item-row').dataset.index);
+    state.sections[secId].splice(idx, 1);
+    if(state.sections[secId].length === 0){
+      state.sections[secId].push({ name:'', cartons:0, pieces:0 });
+    }
+    refreshSection(secId);
+    saveState();
+  }
+});
+
+notesEl.addEventListener('input', () => {
+  state.notes = notesEl.value;
+  saveState();
+});
+
+/* =========================================================
+   نسخ الفاتورة
+   ========================================================= */
+async function copyText(text){
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){ /* نكمل للطريقة البديلة */ }
+
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly','');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){
+    return false;
+  }
+}
+
+function buildInvoiceText(ts){
+  const L = [];
+  L.push('╔══════════════════════════════╗');
+  L.push('║      🧾  فاتورة النقوصات  🧾      ║');
+  L.push('╚══════════════════════════════╝');
+  L.push('');
+  L.push('🗓️ التاريخ : ' + ts.dateStr);
+  L.push('⏰ الوقت   : ' + ts.timeStr + '  (توقيت العراق)');
+  L.push('');
+
+  let tCartons = 0, tPieces = 0, tCount = 0, any = false;
+
+  SECTIONS.forEach(sec => {
+    const items = state.sections[sec.id].filter(
+      it => String(it.name).trim() !== '' || Number(it.cartons) > 0 || Number(it.pieces) > 0
+    );
+    const s = sectionStats(sec.id);
+    tCartons += s.cartons;
+    tPieces  += s.pieces;
+    tCount   += s.count;
+    if(!items.length) return;
+
+    any = true;
+    L.push('┏━━━━━━━━━━━━━━━━━━━━━━━━┓');
+    L.push('┃ ' + sec.emoji + ' ' + sec.name);
+    L.push('┗━━━━━━━━━━━━━━━━━━━━━━━━┛');
+
+    items.forEach(it => {
+      const parts = [];
+      if(Number(it.cartons) > 0) parts.push('كراتين: ' + it.cartons);
+      if(Number(it.pieces)  > 0) parts.push('قطع: ' + it.pieces);
+      const nm = String(it.name).trim() || 'بدون اسم';
+      L.push('  • ' + nm + (parts.length ? ' — ' + parts.join(' | ') : ''));
+    });
+
+    L.push('  ── مجموع القسم: ' + s.cartons + ' كرتون | ' + s.pieces + ' قطعة');
+    L.push('');
+  });
+
+  if(!any){
+    L.push('  (لا توجد مواد مسجّلة في الفاتورة)');
+    L.push('');
+  }
+
+  L.push('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  L.push('📦 عدد المواد     : ' + tCount);
+  L.push('📥 مجموع الكراتين : ' + tCartons);
+  L.push('🔹 مجموع القطع    : ' + tPieces);
+  L.push('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  const notes = String(state.notes || '').trim();
+  if(notes){
+    L.push('');
+    L.push('📝 ملاحظات:');
+    notes.split('\n').forEach(line => L.push('   ' + line));
+  }
+
+  L.push('');
+  L.push('✨ نتمنى لكم طريق سلامة ✨');
+
+  return L.join('\n');
+}
+
+function showPreview(ts){
+  let tCartons = 0, tPieces = 0, tCount = 0;
+  let html = '';
+
+  html +=
+    '<div class="inv">' +
+      '<div class="inv-head">' +
+        '<div class="inv-badge">🧾</div>' +
+        '<h2>فاتورة النقوصات</h2>' +
+        '<div class="inv-line"></div>' +
+        '<div class="inv-datetime">' +
+          '<span>🗓️ ' + esc(ts.dateStr) + '</span>' +
+          '<span>⏰ ' + esc(ts.timeStr) + ' — توقيت العراق</span>' +
+        '</div>' +
+      '</div>';
+
+  SECTIONS.forEach(sec => {
+    const items = state.sections[sec.id].filter(
+      it => String(it.name).trim() !== '' || Number(it.cartons) > 0 || Number(it.pieces) > 0
+    );
+    const s = sectionStats(sec.id);
+    tCartons += s.cartons;
+    tPieces  += s.pieces;
+    tCount   += s.count;
+    if(!items.length) return;
+
+    html += '<div class="inv-sec">' +
+      '<div class="inv-sec-head"><span class="inv-emoji">' + sec.emoji + '</span>' + esc(sec.name) + '</div>';
+
+    items.forEach(it => {
+      const parts = [];
+      if(Number(it.cartons) > 0) parts.push('كراتين: <b>' + it.cartons + '</b>');
+      if(Number(it.pieces)  > 0) parts.push('قطع: <b>' + it.pieces + '</b>');
+      html += '<div class="inv-item">' +
+          '<span class="nm">' + esc(String(it.name).trim() || 'بدون اسم') + '</span>' +
+          '<span class="qty">' + (parts.length ? parts.join(' &nbsp;|&nbsp; ') : '—') + '</span>' +
+          '<span></span>' +
+        '</div>';
+    });
+
+    html += '<div class="inv-sec-total">مجموع: ' + s.cartons + ' كرتون · ' + s.pieces + ' قطعة</div>';
+    html += '</div>';
+  });
+
+  if(tCount === 0){
+    html += '<div class="inv-notes">لا توجد مواد مسجّلة في الفاتورة بعد.</div>';
+  }
+
+  html +=
+      '<div class="inv-total">' +
+        '<small>الملخّص العام</small>' +
+        '<b>' + tCount + ' مادة · ' + tCartons + ' كرتون · ' + tPieces + ' قطعة</b>' +
+      '</div>';
+
+  const notes = String(state.notes || '').trim();
+  if(notes){
+    html += '<div class="inv-notes">📝 ' + esc(notes) + '</div>';
+  }
+
+  html +=
+      '<div class="inv-sign">نتمنى لكم طريق سلامة</div>' +
+      '<div class="inv-foot">✨ نظام تسجيل الفواتير — توقيت العراق ✨</div>' +
+    '</div>';
+
+  previewEl.innerHTML = html;
+  modalEl.classList.add('open');
+  modalEl.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(){
+  modalEl.classList.remove('open');
+  modalEl.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+/* التوست */
+let toastTimer = null;
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3000);
+}
+
+function updateLastCopyHint(){
+  if(state.lastCopy && state.lastCopy.dateStr){
+    hintEl.textContent = '🕓 آخر نسخ للفاتورة: ' + state.lastCopy.dateStr + ' — ' + state.lastCopy.timeStr;
+  }else{
+    hintEl.textContent = '';
+  }
+}
+
+/* زر النسخ */
+document.getElementById('copyBtn').addEventListener('click', async () => {
+  const ts = iraqTime();
+  state.lastCopy = { dateStr: ts.dateStr, timeStr: ts.timeStr, at: Date.now() };
+  saveState();
+  updateLastCopyHint();
+
+  const text = buildInvoiceText(ts);
+  const ok = await copyText(text);
+  showPreview(ts);
+  toast(ok ? '✅ تم نسخ الفاتورة بنجاح' : '⚠️ انسخ النص من نافذة المعاينة');
+});
+
+/* نسخ من داخل المعاينة */
+document.getElementById('modalCopy').addEventListener('click', async () => {
+  const ts = state.lastCopy && state.lastCopy.dateStr ? state.lastCopy : iraqTime();
+  const ok = await copyText(buildInvoiceText(ts));
+  toast(ok ? '✅ تم نسخ نص الفاتورة' : '⚠️ تعذّر النسخ، حدّد النص يدوياً');
+});
+
+/* إغلاق المعاينة */
+modalEl.addEventListener('click', e => {
+  if(e.target.closest('[data-close]')) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && modalEl.classList.contains('open')) closeModal();
+});
+
+/* مسح الفاتورة */
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if(!confirm('هل أنت متأكد من مسح الفاتورة بالكامل؟')) return;
+  const fresh = defaultState();
+  SECTIONS.forEach(s => { state.sections[s.id] = fresh.sections[s.id]; });
+  state.notes = '';
+  state.lastCopy = null;
+  notesEl.value = '';
+  saveState();
+  renderAll();
+  toast('🗑 تم مسح الفاتورة');
+});
+
+/* =========================================================
+   بدء التشغيل
+   ========================================================= */
+renderAll();
+</script>
+</body>
+</html>
